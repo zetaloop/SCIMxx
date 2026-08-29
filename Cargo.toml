@@ -1,0 +1,18 @@
+[package]
+name = "scimxx"
+version = "0.1.0"
+edition = "2024"
+
+[lib]
+name = "scimxx_hook"
+crate-type = ["cdylib"]
+
+[[bin]]
+name = "scimxx"
+path = "src/main.rs"
+
+[dependencies]
+ctor = "0.4"
+libc = "0.2"
+objc2 = "0.6.4"
+

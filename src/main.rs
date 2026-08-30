@@ -160,7 +160,7 @@ fn elevate(action: &str, arguments: &[&OsStr]) -> Result<(), String> {
 }
 
 fn install() -> Result<(), String> {
-    let source = std::env::current_exe()
+    let source = fs::canonicalize(std::env::current_exe().map_err(|error| error.to_string())?)
         .map_err(|error| error.to_string())?
         .with_file_name(HOOK_NAME);
     if !source.is_file() {

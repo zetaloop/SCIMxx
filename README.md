@@ -17,10 +17,15 @@
 
 ```sh
 cargo build --release
-sudo cp target/arm64e-apple-darwin/release/scimxx /usr/local/bin/
-cp target/arm64e-apple-darwin/release/libscimxx_hook.dylib ~/Library/Dictionaries/
+target/arm64e-apple-darwin/release/scimxx install
 ```
 
-## 运行
+`scimxx` 与 `libscimxx_hook.dylib` 需要放在同一目录。可执行文件可以位于任意位置；安装命令会将 hook 复制到 `~/Library/Dictionaries/`，并请求管理员权限安装后台服务。
 
-`scimxx` 等待 `SCIM_Extension`，取得管理员授权后加载 hook，并在输入法进程重启时重新加载。`build.loop.scimxx.plist` 可用于登录时启动 daemon。
+## 用法
+
+- `scimxx install` 安装或更新
+- `scimxx` 启动或重新启动
+- `scimxx stop` 停止
+- `scimxx uninstall` 卸载
+- `scimxx version` 显示版本

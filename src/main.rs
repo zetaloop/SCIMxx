@@ -226,11 +226,22 @@ fn command_error(name: &str, result: &std::process::Output) -> String {
 }
 
 fn bootout_service() -> Result<(), String> {
-    let result = Command::new("/bin/launchctl")
-        .args(["bootout", &format!("system/{LABEL}")])
+    let target = format!("system/{LABEL}");
+    let status = Command::new("/bin/launchctl")
+        .args(["print", &target])
         .output()
         .map_err(|error| format!("launchctl 执行失败：{error}"))?;
-    if result.status.success() || result.status.code() == Some(113) {
+    if status.status.code() == Some(113) {
+        return Ok(());
+    }
+    if !status.status.success() {
+        return Err(command_error("读取服务状态", &status));
+    }
+    let result = Command::new("/bin/launchctl")
+        .args(["bootout", &target])
+        .output()
+        .map_err(|error| format!("launchctl 执行失败：{error}"))?;
+    if result.status.success() {
         Ok(())
     } else {
         Err(command_error("停止服务", &result))

@@ -26,3 +26,5 @@ brew install scimxx
 - `scimxx stop` 停止
 - `scimxx uninstall` 卸载
 - `scimxx version` 显示版本
+
+_顺便一提：[ChsIME++](https://github.com/zetaloop/ChsIMExx)_

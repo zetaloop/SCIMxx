@@ -158,10 +158,8 @@ pub fn inject(pid: i32, path: &Path) -> Result<(), String> {
         let stub_start = &raw const scimxx_stub_start;
         let stub_end = &raw const scimxx_stub_end;
         let stub_len = stub_end as usize - stub_start as usize;
-        let mut stub_copy = vec![0u8; stub_len];
-        std::ptr::copy_nonoverlapping(stub_start, stub_copy.as_mut_ptr(), stub_len);
         let kr = if kr == KERN_SUCCESS {
-            mach_vm_write(task, stub, stub_copy.as_ptr() as u64, stub_len as u32)
+            mach_vm_write(task, stub, stub_start as u64, stub_len as u32)
         } else {
             kr
         };

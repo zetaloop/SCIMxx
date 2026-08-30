@@ -24,5 +24,3 @@ cp target/arm64e-apple-darwin/release/libscimxx_hook.dylib ~/Library/Dictionarie
 ## 运行
 
 `scimxx` 等待 `SCIM_Extension`，取得管理员授权后加载 hook，并在输入法进程重启时重新加载。`build.loop.scimxx.plist` 可用于登录时启动 daemon。
-
-hook 日志写入 `~/Library/Dictionaries/scimxx-hook.log`。

@@ -15,7 +15,7 @@ static ORIGINAL: AtomicPtr<c_void> = AtomicPtr::new(ptr::null_mut());
 const SHIFT: u64 = 1 << 17;
 const COMMAND: u64 = 1 << 20;
 const NSKEYDOWN: u64 = 10;
-const DEVICE_INDEPENDENT_FLAGS: u64 = 0xffff0000;
+const MODIFIER_FLAGS: u64 = 0xf << 17;
 
 core::arch::global_asm!(
     ".text",
@@ -39,7 +39,6 @@ unsafe extern "C" {
     fn _dyld_register_func_for_add_image(
         func: Option<unsafe extern "C" fn(*const libc::c_void, isize)>,
     );
-    fn dprintf(fd: libc::c_int, format: *const libc::c_char, ...) -> libc::c_int;
 }
 
 struct Target {
@@ -50,7 +49,7 @@ struct Target {
 }
 
 fn target_for(key_code: u16, modifiers: u64) -> Option<Target> {
-    match (key_code, modifiers & DEVICE_INDEPENDENT_FLAGS) {
+    match (key_code, modifiers & MODIFIER_FLAGS) {
         (0x2b, 0) => Some(Target {
             key_code: 0x21,
             modifiers: 0,
@@ -99,16 +98,10 @@ fn rewritten_event(event: *const AnyObject, target: &Target) -> Option<*const An
         let is_repeat: bool = msg_send![event, isARepeat];
         let ns_string = objc_getClass(c"NSString".as_ptr());
         let ns_event = objc_getClass(c"NSEvent".as_ptr());
-        if ns_string.is_null() || ns_event.is_null() {
-            return None;
-        }
         let characters: *const AnyObject =
             msg_send![ns_string, stringWithUTF8String: target.characters.as_ptr()];
         let ignoring: *const AnyObject =
             msg_send![ns_string, stringWithUTF8String: target.ignoring.as_ptr()];
-        if characters.is_null() || ignoring.is_null() {
-            return None;
-        }
         let new_event: *const AnyObject = msg_send![
             ns_event,
             keyEventWithType: NSKEYDOWN,
@@ -140,11 +133,7 @@ unsafe extern "C-unwind" fn handle_event_replacement(
         let original = core::mem::transmute::<*mut c_void, Imp>(original);
         let mut forwarded = event;
         let candidate_controller: *const AnyObject = msg_send![this, candidateController];
-        let showing = if candidate_controller.is_null() {
-            false
-        } else {
-            msg_send![candidate_controller, isVisible]
-        };
+        let showing: bool = msg_send![candidate_controller, isVisible];
         let event_type: u64 = msg_send![event, type];
         if showing && event_type == NSKEYDOWN {
             let key_code: u16 = msg_send![event, keyCode];
@@ -159,7 +148,7 @@ unsafe extern "C-unwind" fn handle_event_replacement(
     }
 }
 
-#[ctor]
+#[ctor(unsafe)]
 fn install() {
     unsafe {
         if !install_inner() {
@@ -196,16 +185,16 @@ unsafe fn install_inner() -> bool {
     let sel = sel!(handleEvent:client:);
     let method = unsafe { class_getInstanceMethod(engine_class, sel) };
     if method.is_null() {
-        log(c"handleEvent:client: not found");
+        report(c"handleEvent:client: not found");
         return true;
     }
     let encoding = unsafe { CStr::from_ptr(method_getTypeEncoding(method)) };
     if encoding.to_bytes() != b"B32@0:8@16@24" {
-        log(c"unexpected handleEvent:client: signature");
+        report(c"unexpected handleEvent:client: signature");
         return true;
     }
     let Some(original) = (unsafe { method_getImplementation(method) }) else {
-        log(c"handleEvent:client: implementation missing");
+        report(c"handleEvent:client: implementation missing");
         return true;
     };
     let original = original as *mut c_void;
@@ -233,35 +222,16 @@ unsafe fn install_inner() -> bool {
             method_getTypeEncoding(method),
         );
     }
-    log(c"handleEvent:client: hooked");
     true
 }
 
-fn log(message: &CStr) {
+fn report(message: &CStr) {
     unsafe {
-        let home = libc::getenv(c"HOME".as_ptr());
-        if home.is_null() {
-            return;
-        }
-        let mut path = [0 as libc::c_char; libc::PATH_MAX as usize];
-        let length = libc::snprintf(
-            path.as_mut_ptr(),
-            path.len(),
-            c"%s/Library/Dictionaries/scimxx-hook.log".as_ptr(),
-            home,
+        libc::write(
+            libc::STDERR_FILENO,
+            message.as_ptr().cast(),
+            message.to_bytes().len(),
         );
-        if length < 0 || length as usize >= path.len() {
-            return;
-        }
-        let fd = libc::open(
-            path.as_ptr(),
-            libc::O_WRONLY | libc::O_CREAT | libc::O_APPEND,
-            0o644,
-        );
-        if fd < 0 {
-            return;
-        }
-        dprintf(fd, c"[%d] %s\n".as_ptr(), libc::getpid(), message.as_ptr());
-        libc::close(fd);
+        libc::write(libc::STDERR_FILENO, c"\n".as_ptr().cast(), 1);
     }
 }

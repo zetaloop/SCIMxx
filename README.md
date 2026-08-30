@@ -1,4 +1,4 @@
-# SCIMxx
+# SCIM++
 
 macOS 26 中文输入法增强。
 
@@ -16,7 +16,12 @@ macOS 26 中文输入法增强。
 
 ### 用法
 
-- `scimxx install` 安装
+```zsh
+brew tap zetaloop/zetaloop; brew trust zetaloop/zetaloop
+brew install scimxx
+```
+
+- `scimxx install` 安装服务
 - `scimxx start` 启动 / 重启
 - `scimxx stop` 停止
 - `scimxx uninstall` 卸载
